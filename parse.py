@@ -87,9 +87,7 @@ def _save_part_one(grams, outpath):
             out.write('%d\t%s\n' % (uid, ' '.join(gram)))
 
 def _save_part_two(grams, sgrams, sgram_freq, skipmax,
-                   wordlist_outpath, freq_outpath):
-    _save_part_one(grams, wordlist_outpath)
-
+                   freq_outpath):
     with open(freq_outpath, 'w') as out:
         fields = ['word 1', 'word 2']
         fields.extend(['gap%d_freq' % x for x in range(1, skipmax + 1)])
@@ -134,12 +132,12 @@ def main():
         word_categories = None
 
     grams = ubtgrams(tokens, word_categories)
-    _save_part_one(grams, 'part1.tsv')
+    _save_part_one(grams, 'master-wordlist.tsv')
     
-    grams, sgrams, sgram_freq = skipgram_all(tokens, options.skip_max,
-                                             word_categories)
+    _, sgrams, sgram_freq = skipgram_all(tokens, options.skip_max,
+                                         word_categories)
     _save_part_two(grams, sgrams, sgram_freq, options.skip_max,
-                   'part2-wordlist.tsv', 'part2-freq.tsv')
+                   'part2-freq.tsv')
 
 if __name__ == '__main__':
     sys.exit(main())
