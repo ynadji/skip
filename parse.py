@@ -2,11 +2,11 @@
 
 import sys
 from optparse import OptionParser
-from collections import defaultdict
+from collections import defaultdict, Counter
 import itertools
 
 from nltk import word_tokenize
-from nltk.util import ngrams
+from nltk.util import ngrams, skipgrams
 
 def loadraw(path):
     with open(path) as f:
@@ -45,6 +45,30 @@ def ubtgrams(tokens, word_categories=None):
 
     return dict(grams)
 
+def skipgram_all(tokens, skipmax, word_categories=None):
+    assert(skipmax >= 1)
+    grams = defaultdict(itertools.count().next)
+
+    # get single tokens before skipgramming
+    if word_categories:
+        tokens = [word_categories.get((token, ), token) for token in tokens]
+
+    # find skipgrams, annotate with skip value
+    sgrams = zip(skipgrams(tokens, 2, skipmax), itertools.cycle(range(0, skipmax + 1)))
+    # ignore bigrams without a skip
+    sgrams = [x for x in sgrams if x[1] != 0]
+
+    # get counts, keeping track of skip value
+    sgram_freq = Counter(sgrams)
+
+    # get unigrams for outputting the master list
+    for ngram in ngrams(tokens, 1):
+        _ = grams[ngram]
+
+    # return sgrams without skip value for easy iteration & printing
+    # when outputting part 2
+    return grams, {x[0] for x in sgrams}, sgram_freq
+
 def _load_categorizer(category_tsv):
     word_categories = {}
     with open(category_tsv) as f:
@@ -62,6 +86,22 @@ def _save_part_one(grams, outpath):
         for gram, uid in grams.iteritems():
             out.write('%d\t%s\n' % (uid, ' '.join(gram)))
 
+def _save_part_two(grams, sgrams, sgram_freq, skipmax,
+                   wordlist_outpath, freq_outpath):
+    _save_part_one(grams, wordlist_outpath)
+
+    with open(freq_outpath, 'w') as out:
+        fields = ['word 1', 'word 2']
+        fields.extend(['gap%d_freq' % x for x in range(1, skipmax + 1)])
+        out.write('%s\n' % '\t'.join(fields))
+
+        for token1, token2 in sgrams:
+            fields = [grams[(token1,)], grams[(token2,)]]
+            for skip in range(1, skipmax + 1):
+                fields.append(sgram_freq[((token1, token2), skip)])
+
+            out.write('%s\n' % '\t'.join(map(str, fields)))
+
 def main():
     """main function for standalone usage"""
     usage = "usage: %prog [options] input"
@@ -72,6 +112,8 @@ def main():
                       help='Category word list to use (TAB separated, 1 line header, wordTABcategory)')
     parser.add_option('-c', '--use-categories', default=False, action='store_true',
                       help='Use categories')
+    parser.add_option('-m', '--skip-max', default=3, type='int',
+                      help='Maximum skip to consider [default: %default]')
 
     (options, args) = parser.parse_args()
 
@@ -85,13 +127,19 @@ def main():
     tokens = remove_stopwords(tokenize(args), stopwords)
 
     if options.use_categories:
-        sys.stderr.write('Using category file: %s...\n' % options.category_word_list)
+        sys.stderr.write('Using category file: %s...\n' %
+                         options.category_word_list)
         word_categories = _load_categorizer(options.category_word_list)
-        grams = ubtgrams(tokens, word_categories)
     else:
-        grams = ubtgrams(tokens)
+        word_categories = None
 
+    grams = ubtgrams(tokens, word_categories)
     _save_part_one(grams, 'part1.tsv')
+    
+    grams, sgrams, sgram_freq = skipgram_all(tokens, options.skip_max,
+                                             word_categories)
+    _save_part_two(grams, sgrams, sgram_freq, options.skip_max,
+                   'part2-wordlist.tsv', 'part2-freq.tsv')
 
 if __name__ == '__main__':
     sys.exit(main())
