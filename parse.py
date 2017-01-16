@@ -4,13 +4,17 @@ import sys
 from optparse import OptionParser
 from collections import defaultdict, Counter
 import itertools
+import string
 
 from nltk import word_tokenize
 from nltk.util import ngrams, skipgrams
 
+def tokenfilter(token):
+    return token.translate(None, string.digits).translate(None, string.punctuation)
+
 def loadraw(path):
     with open(path) as f:
-        return f.read().lower()
+        return tokenfilter(f.read().lower())
 
 def tokenize_many(paths):
     raws = []
@@ -22,7 +26,6 @@ def tokenize_many(paths):
 def tokenize(paths):
     return word_tokenize(tokenize_many(paths))
 
-# TODO: remove digits & punctuation
 def remove_stopwords(tokens, stopwords):
     return [token for token in tokens if token not in stopwords]
 
