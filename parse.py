@@ -13,6 +13,7 @@ import xlrd
 
 # TODO:
 # * add logging
+# * py2exe with drag'n'drop
 # * handle skipgram boundaries. this means:
 #   * compute skipgram per review, or
 #   * compute skipgram per category
