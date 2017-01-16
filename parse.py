@@ -5,26 +5,68 @@ from optparse import OptionParser
 from collections import defaultdict, Counter
 import itertools
 import string
+import os
 
 from nltk import word_tokenize
 from nltk.util import ngrams, skipgrams
+import xlrd
+
+# TODO:
+# * add logging
+# * handle skipgram boundaries. this means:
+#   * compute skipgram per review, or
+#   * compute skipgram per category
+#
+# tbh, in practice this won't really matter probably. it will get
+# washed out given the size of the data.
+
+def fuckunicode(s):
+    def isascii(c): return ord(c) < 128
+    return filter(isascii, s)
 
 def tokenfilter(token):
-    return token.translate(None, string.digits).translate(None, string.punctuation)
+    return str(fuckunicode(token)).translate(None, string.digits).translate(None, string.punctuation)
 
-def loadraw(path):
-    with open(path) as f:
-        return tokenfilter(f.read().lower())
+def loadcells(review_cells):
+    try:
+        return [tokenfilter(cell.value.lower()) for cell in review_cells]
+    except AttributeError:
+        sys.stderr.write('Error parsing review:\n\n%s\n' % repr(cell))
 
-def tokenize_many(paths):
+def partition(pred, iterable):
+    """Use a predicate to partition entries into false entries and true entries"""
+    # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
+    t1, t2 = itertools.tee(iterable)
+    return itertools.ifilterfalse(pred, t1), filter(pred, t2)
+
+def _preprocess_reviews(reviews, sheetname):
+    pred = lambda (idx, cell): repr(cell).startswith('error:')
+    good, bad = partition(pred, enumerate(reviews))
+
+    for idx, review in bad:
+        sys.stderr.write('Error on row %d in sheet "%s". Ignoring row.\n' % (idx+1, sheetname))
+
+    return [review for idx, review in good]
+
+def tokenize_many(xlsxpath, review_index=1):
     raws = []
-    for path in paths:
-        raws.append(loadraw(path))
+
+    with xlrd.open_workbook(xlsxpath) as book:
+        for sheet in book.sheets():
+            sys.stderr.write('Parsing sheet %s\n' % sheet.name)
+            # NOTE: to be removed when format is agreed upon.
+            if sheet.name == u'all real ':
+                reviews = sheet.col(3)
+            else:
+                reviews = sheet.col(review_index)
+
+            reviews = _preprocess_reviews(reviews, sheet.name)
+            raws.extend(loadcells(reviews))
 
     return '\n'.join(raws)
 
-def tokenize(paths):
-    return word_tokenize(tokenize_many(paths))
+def tokenize(xlsxpath):
+    return word_tokenize(tokenize_many(xlsxpath))
 
 def remove_stopwords(tokens, stopwords):
     return [token for token in tokens if token not in stopwords]
@@ -105,7 +147,7 @@ def _save_part_two(grams, sgrams, sgram_freq, skipmax,
 
 def main():
     """main function for standalone usage"""
-    usage = "usage: %prog [options] input"
+    usage = "usage: %prog [options] input.xlsx"
     parser = OptionParser(usage=usage)
     parser.add_option('-s', '--stopword-list', default='data/stopwords.txt',
                       help='Stopword list to use (one word per line; only lowercase)')
@@ -118,14 +160,22 @@ def main():
 
     (options, args) = parser.parse_args()
 
-    if len(args) < 0:
+    if len(args) != 1:
         parser.print_help()
         return 2
 
+    xlsxdir = os.path.dirname(args[0])
+    xlsxname = os.path.basename(args[0]).replace('.xlsx', '').replace('.XLSX', '')
+    outdir = os.path.join(xlsxdir, xlsxname)
+
+    try:
+        os.mkdir(outdir)
+    except OSError:
+        sys.stderr.write('%s already exists! Files will be overwritten.\n' % outdir)
 
     # do stuff
     stopwords = _build_stopword_list(options.stopword_list)
-    tokens = remove_stopwords(tokenize(args), stopwords)
+    tokens = remove_stopwords(tokenize(args[0]), stopwords)
 
     if options.use_categories:
         sys.stderr.write('Using category file: %s...\n' %
@@ -135,12 +185,12 @@ def main():
         word_categories = None
 
     grams = ubtgrams(tokens, word_categories)
-    _save_part_one(grams, 'master-wordlist.tsv')
+    _save_part_one(grams, os.path.join(outdir, 'master-wordlist.tsv'))
     
     _, sgrams, sgram_freq = skipgram_all(tokens, options.skip_max,
                                          word_categories)
     _save_part_two(grams, sgrams, sgram_freq, options.skip_max,
-                   'part2-freq.tsv')
+                   os.path.join(outdir, 'part2-freq.tsv'))
 
 if __name__ == '__main__':
     sys.exit(main())
