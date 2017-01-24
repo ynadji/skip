@@ -17,8 +17,6 @@ import xlrd
 # * handle skipgram boundaries. this means:
 #   * compute skipgram per review, or
 #   * compute skipgram per category
-# * keep $, remove all other punctuation
-#
 # tbh, in practice this won't really matter probably. it will get
 # washed out given the size of the data.
 
@@ -27,7 +25,8 @@ def fuckunicode(s):
     return filter(isascii, s)
 
 def tokenfilter(token):
-    return str(fuckunicode(token)).translate(None, string.digits).translate(None, string.punctuation)
+    punctuation = string.punctuation.replace('$', '')
+    return str(fuckunicode(token)).translate(None, punctuation)
 
 def loadcells(review_cells):
     try:
