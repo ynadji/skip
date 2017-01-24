@@ -12,11 +12,13 @@ from nltk.util import ngrams, skipgrams
 import xlrd
 
 # TODO:
+# * add frequency counts to master wordlist
 # * add logging
 # * py2exe with drag'n'drop
 # * handle skipgram boundaries. this means:
 #   * compute skipgram per review, or
 #   * compute skipgram per category
+# * keep $, remove all other punctuation
 #
 # tbh, in practice this won't really matter probably. it will get
 # washed out given the size of the data.
