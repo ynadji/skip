@@ -12,7 +12,6 @@ from nltk.util import ngrams, skipgrams
 import xlrd
 
 # TODO:
-# * add frequency counts to master wordlist
 # * add logging
 # * py2exe with drag'n'drop
 # * handle skipgram boundaries. this means:
@@ -80,6 +79,7 @@ def _build_stopword_list(stopword_list_path):
 
 def ubtgrams(tokens, word_categories=None):
     grams = defaultdict(itertools.count().next)
+    freq = defaultdict(int)
 
     # get single tokens before ngramming
     if word_categories:
@@ -90,8 +90,9 @@ def ubtgrams(tokens, word_categories=None):
             if word_categories:
                 ngram = word_categories.get(ngram, ngram)
             _ = grams[ngram]
+            freq[ngram] += 1
 
-    return dict(grams)
+    return dict(grams), dict(freq)
 
 def skipgram_all(tokens, skipmax, word_categories=None):
     assert(skipmax >= 1)
@@ -128,11 +129,11 @@ def _load_categorizer(category_tsv):
 
     return word_categories
 
-def _save_part_one(grams, outpath):
+def _save_part_one(grams, freq, outpath):
     with open(outpath, 'w') as out:
-        out.write('label\twords\n')
+        out.write('label\twords\tcount\n')
         for gram, uid in grams.iteritems():
-            out.write('%d\t%s\n' % (uid, ' '.join(gram)))
+            out.write('%d\t%s\t%d\n' % (uid, ' '.join(gram), freq[gram]))
 
 def _save_part_two(grams, sgrams, sgram_freq, skipmax,
                    freq_outpath):
@@ -187,8 +188,8 @@ def main():
     else:
         word_categories = None
 
-    grams = ubtgrams(tokens, word_categories)
-    _save_part_one(grams, os.path.join(outdir, 'master-wordlist.tsv'))
+    grams, freq = ubtgrams(tokens, word_categories)
+    _save_part_one(grams, freq, os.path.join(outdir, 'master-wordlist.tsv'))
     
     _, sgrams, sgram_freq = skipgram_all(tokens, options.skip_max,
                                          word_categories)
