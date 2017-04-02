@@ -2,6 +2,5 @@ altgraph==0.13
 macholib==1.8
 modulegraph==0.13
 nltk==3.2.1
-pkg-resources==0.0.0
 py2app==0.11
 xlrd==1.0.0
