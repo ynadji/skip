@@ -174,7 +174,13 @@ def main():
 
     # do stuff
     stopwords = _build_stopword_list(options.stopword_list)
-    tokens = remove_stopwords(tokenize(args[0]), stopwords)
+    try:
+        tokens = remove_stopwords(tokenize(args[0]), stopwords)
+    except LookupError:
+        from nltk import download
+        sys.stderr.write('Re-run after installing NLTK libraries\n')
+        download()
+        sys.exit(2)
 
     if options.use_categories:
         sys.stderr.write('Using category file: %s...\n' %
