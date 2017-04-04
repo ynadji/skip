@@ -9,6 +9,8 @@ into the terminal and it will fill it out for you.
 ```
 $ git clone git@github.com:ynadji/skip.git
 $ cd skip
+# if on OS X
+$ sudo easy_install pip
 $ pip install --user -r requirements.txt
 $ python parse.py path/to/reviews.xslx
 ```
