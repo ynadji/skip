@@ -55,11 +55,7 @@ def tokenize_many(xlsxpath, review_index=1):
     with xlrd.open_workbook(xlsxpath) as book:
         for sheet in book.sheets():
             sys.stderr.write('Parsing sheet %s\n' % sheet.name)
-            # NOTE: to be removed when format is agreed upon.
-            if sheet.name == u'all real ':
-                reviews = sheet.col(3)
-            else:
-                reviews = sheet.col(review_index)
+            reviews = sheet.col(review_index)
 
             reviews = _preprocess_reviews(reviews, sheet.name)
             raws.extend(loadcells(reviews))
@@ -178,7 +174,13 @@ def main():
 
     # do stuff
     stopwords = _build_stopword_list(options.stopword_list)
-    tokens = remove_stopwords(tokenize(args[0]), stopwords)
+    try:
+        tokens = remove_stopwords(tokenize(args[0]), stopwords)
+    except LookupError:
+        from nltk import download
+        sys.stderr.write('Re-run after installing NLTK libraries\n')
+        download()
+        sys.exit(2)
 
     if options.use_categories:
         sys.stderr.write('Using category file: %s...\n' %
