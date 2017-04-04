@@ -1,8 +1,8 @@
 # installing
 
 open Terminal.app. lines beginning with `$` should be typed into the terminal
-and end hitting the `Enter` key. lines beginning with `#` are comments for
-explanatory comments.
+and end hitting the `Enter` key. lines beginning with `#` are explanatory
+comments.
 
 ```
 $ git clone git@github.com:ynadji/skip.git
