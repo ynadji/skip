@@ -7,7 +7,7 @@ comments. if you're using OS X's Terminal.app instead of typing paths you can
 into the terminal and it will fill it out for you.
 
 ```
-$ git clone git@github.com:ynadji/skip.git
+$ git clone https://github.com/ynadji/skip.git
 $ cd skip
 # if on OS X
 $ sudo easy_install pip
